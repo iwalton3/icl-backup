@@ -1,0 +1,15 @@
+[Unit]
+Description=ICL-Backup
+After=getty.target
+Conflicts=getty@tty1.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/ui-live.sh
+StandardInput=tty-force
+StandardOutput=inherit
+StandardError=inherit
+
+[Install]
+WantedBy=graphical.target

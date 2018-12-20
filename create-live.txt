@@ -1,0 +1,83 @@
+From http://willhaley.com/blog/create-a-custom-debian-live-environment/.
+Modified in places to support automatic script launching.
+
+sudo apt-get install \
+    debootstrap syslinux isolinux squashfs-tools \
+    genisoimage memtest86+ rsync
+
+mkdir $HOME/live_boot
+sudo debootstrap \
+    --arch=amd64 \
+    --variant=minbase \
+    jessie $HOME/live_boot/chroot http://ftp.us.debian.org/debian/
+sudo chroot $HOME/live_boot/chroot
+
+From within the CHROOT:
+
+echo "icl-backup" > /etc/hostname
+
+apt install --no-install-recommends hdparm bc linux-image-3.16.0-4-amd64 wget pciutils usbutils ntfs-3g hfsprogs rsync syslinux partclone live-boot cmake make libssl-dev libprotobuf-dev protobuf-compiler liblzma-dev liblzo2-dev zlib1g-dev lvm2 parted gdisk cryptsetup whiptail g++
+
+**i386 kernel: linux-image-3.16.0-4-686-pae
+
+Run the install-zbackup.sh
+Copy ui-live.sh, backup-create.sh, and backup-restore.sh to /usr/bin and make them executable.
+
+Copy icl-backup.service to /etc/systemd/system/.
+
+systemctl enable icl-backup.service
+
+Set the root password to root.
+Exit the chroot.
+
+mkdir -p $HOME/live_boot/image/{live,isolinux}
+
+(cd $HOME/live_boot && \
+    cp chroot/boot/vmlinuz-3.16.0-4-586 image/live/vmlinuz1
+    cp chroot/boot/initrd.img-3.16.0-4-586 image/live/initrd1
+)
+
+Copy the isolinux.cfg into $HOME/live_boot/image/isolinux/isolinux.cfg.
+
+(cd $HOME/live_boot/image/ && \
+    cp /usr/lib/ISOLINUX/isolinux.bin isolinux/ && \
+    cp /usr/lib/syslinux/modules/bios/menu.c32 isolinux/ && \
+    cp /usr/lib/syslinux/modules/bios/hdt.c32 isolinux/ && \
+    cp /usr/lib/syslinux/modules/bios/ldlinux.c32 isolinux/ && \
+    cp /usr/lib/syslinux/modules/bios/libutil.c32 isolinux/ && \
+    cp /usr/lib/syslinux/modules/bios/libmenu.c32 isolinux/ && \
+    cp /usr/lib/syslinux/modules/bios/libcom32.c32 isolinux/ && \
+    cp /usr/lib/syslinux/modules/bios/libgpl.c32 isolinux/ && \
+    cp /usr/share/misc/pci.ids isolinux/ && \
+    cp /boot/memtest86+.bin live/memtest
+)
+
+To make a live CD, run the gen-iso.sh
+
+To make a USB image, follow these instructions:
+
+Copy files necessary for the USB to boot and copy the environment to the USB drive (I am assuming you have an umounted FAT32 formatted USB drive /dev/sdf and the BOOT flag is set on /dev/sdf1 and you have a ready mount point at /mnt/usb)
+
+sudo syslinux -i /dev/sdf1
+sudo dd \
+    if=/usr/lib/syslinux/mbr/mbr.bin \
+    of=/dev/sdf \
+    conv=notrunc bs=440 count=1
+sudo mount /dev/sdf1 /mnt/usb
+
+You should be able to copy and paste this block into a terminal to save you some time.
+
+sudo cp /usr/lib/syslinux/modules/bios/menu.c32 /mnt/usb/ && \
+sudo cp /usr/lib/syslinux/modules/bios/hdt.c32 /mnt/usb/ && \
+sudo cp /usr/lib/syslinux/modules/bios/ldlinux.c32 /mnt/usb/ && \
+sudo cp /usr/lib/syslinux/modules/bios/libutil.c32 /mnt/usb/ && \
+sudo cp /usr/lib/syslinux/modules/bios/libmenu.c32 /mnt/usb/ && \
+sudo cp /usr/lib/syslinux/modules/bios/libcom32.c32 /mnt/usb/ && \
+sudo cp /usr/lib/syslinux/modules/bios/libgpl.c32 /mnt/usb/ && \
+sudo cp /boot/memtest86+.bin /mnt/usb/memtest && \
+sudo cp $HOME/live_boot/image/isolinux/isolinux.cfg /mnt/usb/syslinux.cfg && \
+sudo cp /usr/share/misc/pci.ids /mnt/usb/ && \
+sudo rsync -rv $HOME/live_boot/image/live /mnt/usb/
+
+
+

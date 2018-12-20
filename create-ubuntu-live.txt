@@ -1,0 +1,43 @@
+Download the ISO file.
+mkdir mnt
+sudo mount -o loop ubuntu-9.04-desktop-i386.iso mnt
+mkdir extract-cd
+sudo rsync --exclude=/casper/filesystem.squashfs -a mnt/ extract-cd
+sudo unsquashfs mnt/casper/filesystem.squashfs
+sudo mv squashfs-root edit
+sudo chroot edit
+Install tasksel. Run and unselect everything except Ubuntu Live.
+Uninstall tegaki-zinnia-japanese ubiquity-slideshow-ubuntu geoip-database update-manager-core plymouth plymouth-theme-ubuntu-text libx11-data libx11-6 friendly-recovery command-not-found command-not-found-data apparmor manpages mlocate tcpdump
+Run apt --auto-remove install
+Add universe and multiverse to /etc/apt/sources.list
+Run apt update.
+apt install --no-install-recommends hdparm bc wget ntfs-3g rsync partclone cmake make lvm2 parted gdisk cryptsetup whiptail
+Install zbackup. Uninstall unneeded packages that installs.
+Build http://www.magiksys.net/ddumbfs/ from source.
+Copy ui-live.sh backup-create.sh backup-restore.sh to /usr/bin/.
+Copy icl-backup.service to /etc/systemd/system/.
+systemctl enable icl-backup
+aptitude clean
+rm -rf /tmp/* ~/.bash_history
+rm /var/lib/dbus/machine-id
+rm /sbin/initctl
+dpkg-divert --rename --remove /sbin/initctl
+sudo su
+chmod +w extract-cd/casper/filesystem.manifest
+chroot edit dpkg-query -W --showformat='${Package} ${Version}\n' > extract-cd/casper/filesystem.manifest
+exit
+sudo cp extract-cd/casper/filesystem.manifest extract-cd/casper/filesystem.manifest-desktop
+sudo sed -i '/ubiquity/d' extract-cd/casper/filesystem.manifest-desktop
+sudo sed -i '/casper/d' extract-cd/casper/filesystem.manifest-desktop
+sudo rm extract-cd/casper/filesystem.squashfs
+sudo mksquashfs edit extract-cd/casper/filesystem.squashfs
+sudo su
+printf $(du -sx --block-size=1 edit | cut -f1) > extract-cd/casper/filesystem.size
+exit
+sudo vim extract-cd/README.diskdefines
+cd extract-cd
+sudo rm md5sum.txt
+find -type f -print0 | sudo xargs -0 md5sum | grep -v isolinux/boot.cat | sudo tee md5sum.txt
+Edit grub.cfg in extract-cd.
+sudo genisoimage -U -A "ICL-Backup" -V "ICL-Backup" -volset "ICL-Backup" -J -joliet-long -r -v -T -o ../icl-backup-ubuntu-uefi.iso -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot --eltorito-boot boot/grub/efi.img -no-emul-boot .
+
